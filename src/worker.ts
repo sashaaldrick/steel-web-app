@@ -1,4 +1,5 @@
 interface Env {
+    ANTHROPIC_API_KEY: string;
     // Add any environment variables here if needed
 }
 
@@ -39,6 +40,10 @@ const HTML = `<!DOCTYPE html>
             margin-top: 1rem;
             padding: 1rem;
             border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 500px;
+            overflow-y: auto;
         }
         .success {
             background: #e6f4ea;
@@ -52,7 +57,7 @@ const HTML = `<!DOCTYPE html>
 </head>
 <body>
     <div class="upload-container">
-        <h1>Contract Uploader</h1>
+        <h1>Smart Contract Analyzer</h1>
         <input type="file" id="contractFile" accept=".sol" style="display: none;">
         <button class="upload-button" onclick="document.getElementById('contractFile').click()">
             Upload Contract
@@ -66,7 +71,7 @@ const HTML = `<!DOCTYPE html>
             if (!file) return;
 
             const status = document.getElementById('status');
-            status.textContent = 'Uploading...';
+            status.textContent = 'Analyzing contract...';
             status.className = '';
 
             try {
@@ -76,19 +81,59 @@ const HTML = `<!DOCTYPE html>
                 });
 
                 if (response.ok) {
-                    status.textContent = 'Contract uploaded successfully!';
+                    const data = await response.json();
+                    status.textContent = data.analysis;
                     status.className = 'success';
                 } else {
-                    throw new Error('Upload failed');
+                    throw new Error('Analysis failed');
                 }
             } catch (error) {
-                status.textContent = 'Error uploading contract. Please try again.';
+                status.textContent = 'Error analyzing contract. Please try again.';
                 status.className = 'error';
             }
         });
     </script>
 </body>
 </html>`;
+
+interface ClaudeResponse {
+    content: Array<{
+        text: string;
+    }>;
+}
+
+async function analyzeContractWithClaude(contractData: string, apiKey: string): Promise<string> {
+    const prompt = `You are a smart contract expert. Please analyze the following smart contract and provide a detailed analysis of its security, functionality, and potential improvements. Focus on identifying any vulnerabilities or best practices that aren't being followed.
+
+Contract:
+${contractData}
+
+Please provide your analysis in a structured format.`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+            model: 'claude-3-opus-20240229',
+            max_tokens: 4096,
+            messages: [{
+                role: 'user',
+                content: prompt
+            }]
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to analyze contract with Claude');
+    }
+
+    const result = await response.json() as ClaudeResponse;
+    return result.content[0].text;
+}
 
 export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -103,19 +148,19 @@ export default {
             try {
                 const contractData = await request.text();
 
-                // Here you would typically:
-                // 1. Validate the contract
-                // 2. Store it somewhere (e.g., KV store, R2, etc.)
-                // 3. Process it as needed
+                // Analyze the contract with Claude
+                const analysis = await analyzeContractWithClaude(contractData, env.ANTHROPIC_API_KEY);
 
-                return new Response('SUCCESS', {
+                return new Response(JSON.stringify({ analysis }), {
                     status: 200,
                     headers: {
-                        'Content-Type': 'text/plain',
+                        'Content-Type': 'application/json',
                     },
                 });
             } catch (error) {
-                return new Response('Error processing contract', { status: 500 });
+                return new Response('Error processing contract: ' + (error as Error).message, {
+                    status: 500
+                });
             }
         }
 

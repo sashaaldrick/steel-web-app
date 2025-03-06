@@ -32,6 +32,7 @@ const HTML = `<!DOCTYPE html>
             border-radius: 4px;
             cursor: pointer;
             font-size: 1rem;
+            margin-right: 10px;
         }
         .upload-button:hover {
             background: #0051b3;
@@ -53,31 +54,127 @@ const HTML = `<!DOCTYPE html>
             background: #fce8e6;
             color: #c5221f;
         }
+        .input-section {
+            margin-bottom: 1.5rem;
+        }
+        .tab-container {
+            display: flex;
+            margin-bottom: 1rem;
+        }
+        .tab {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            background: #f5f5f5;
+        }
+        .tab.active {
+            background: white;
+            border-bottom: none;
+        }
+        .tab-content {
+            display: none;
+            padding: 1rem;
+            border: 1px solid #ddd;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 0.5rem;
+            font-family: monospace;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+        }
     </style>
 </head>
 <body>
     <div class="upload-container">
         <h1>Smart Contract Analyzer</h1>
-        <input type="file" id="contractFile" accept=".sol" style="display: none;">
-        <button class="upload-button" onclick="document.getElementById('contractFile').click()">
-            Upload Contract
-        </button>
+        
+        <div class="input-section">
+            <div class="tab-container">
+                <div class="tab active" id="fileTab">Upload File</div>
+                <div class="tab" id="textTab">Paste Code</div>
+            </div>
+            
+            <div class="tab-content active" id="fileContent">
+                <input type="file" id="contractFile" accept=".sol" style="display: none;">
+                <button class="upload-button" onclick="document.getElementById('contractFile').click()">
+                    Select Contract File
+                </button>
+                <span id="selectedFileName"></span>
+            </div>
+            
+            <div class="tab-content" id="textContent">
+                <textarea id="contractText" placeholder="Paste your Solidity contract code here..."></textarea>
+            </div>
+        </div>
+        
+        <button class="upload-button" id="analyzeButton">Analyze Contract</button>
         <div id="status"></div>
     </div>
 
     <script>
-        document.getElementById('contractFile').addEventListener('change', async (e) => {
+        // Tab switching functionality
+        document.getElementById('fileTab').addEventListener('click', () => switchTab('file'));
+        document.getElementById('textTab').addEventListener('click', () => switchTab('text'));
+        
+        function switchTab(tabName) {
+            // Update tab classes
+            document.getElementById('fileTab').classList.toggle('active', tabName === 'file');
+            document.getElementById('textTab').classList.toggle('active', tabName === 'text');
+            
+            // Update content visibility
+            document.getElementById('fileContent').classList.toggle('active', tabName === 'file');
+            document.getElementById('textContent').classList.toggle('active', tabName === 'text');
+        }
+        
+        // Show selected filename
+        document.getElementById('contractFile').addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (!file) return;
-
+            if (file) {
+                document.getElementById('selectedFileName').textContent = file.name;
+            }
+        });
+        
+        // Handle the analyze button click
+        document.getElementById('analyzeButton').addEventListener('click', async () => {
             const status = document.getElementById('status');
             status.textContent = 'Analyzing contract...';
             status.className = '';
-
+            
+            // Determine which input method is active
+            const isFileTabActive = document.getElementById('fileTab').classList.contains('active');
+            let contractData;
+            
+            if (isFileTabActive) {
+                const fileInput = document.getElementById('contractFile');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    // If no file is selected, open the file dialog
+                    fileInput.click();
+                    return;
+                }
+                
+                contractData = await file.text();
+            } else {
+                contractData = document.getElementById('contractText').value.trim();
+                
+                if (!contractData) {
+                    status.textContent = 'Please paste your contract code first.';
+                    status.className = 'error';
+                    return;
+                }
+            }
+            
             try {
                 const response = await fetch('/api/upload', {
                     method: 'POST',
-                    body: file
+                    body: contractData
                 });
 
                 if (response.ok) {
@@ -103,12 +200,27 @@ interface ClaudeResponse {
 }
 
 async function analyzeContractWithClaude(contractData: string, apiKey: string): Promise<string> {
-    const prompt = `You are a smart contract expert. Please analyze the following smart contract and provide a detailed analysis of its security, functionality, and potential improvements. Focus on identifying any vulnerabilities or best practices that aren't being followed.
+    const prompt = `You are an expert in using RISC Zero for Steel execution proofs. 
+    Please highlight the functions in the following contract that could be converted to using a ZK proof verification and give the suggested function.
+    An example of a Steel ERC20 counter proof is as follows:
 
-Contract:
-${contractData}
+    /// @inheritdoc ICounter
+    function increment(bytes calldata journalData, bytes calldata seal) external {
+        // Decode and validate the journal data
+        Journal memory journal = abi.decode(journalData, (Journal));
+        require(journal.tokenContract == tokenContract, "Invalid token address");
+        require(Steel.validateCommitment(journal.commitment), "Invalid commitment");
 
-Please provide your analysis in a structured format.`;
+        // Verify the proof
+        bytes32 journalHash = sha256(journalData);
+        verifier.verify(seal, imageID, journalHash);
+
+        counter += 1;
+    }
+
+    ${contractData}
+
+    Please provide your analysis in a structured format.`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -118,7 +230,7 @@ Please provide your analysis in a structured format.`;
             'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-            model: 'claude-3-opus-20240229',
+            model: 'claude-3-7-sonnet-20250219',
             max_tokens: 4096,
             messages: [{
                 role: 'user',

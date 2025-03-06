@@ -12,7 +12,7 @@ A web application that enables Solidity developers to optimize their smart contr
 
 ## Tech Stack
 
-- **Frontend**: Next.js, TailwindCSS, Bun
+- **Backend**: Cloudflare Workers, TypeScript
 - **Code Display**: CodeMirror for Solidity display and highlighting
 - **Blockchain Integration**: ThirdWeb SDK for wallet connection and transaction handling
 - **External APIs**: Etherscan API for fetching contract source code
@@ -22,7 +22,6 @@ A web application that enables Solidity developers to optimize their smart contr
 ### Prerequisites
 
 - [Bun](https://bun.sh/) (v1.0.0 or higher)
-- [Node.js](https://nodejs.org/) (v18.0.0 or higher)
 
 ### Installation
 
@@ -39,17 +38,16 @@ A web application that enables Solidity developers to optimize their smart contr
 
 3. Create a `.env.local` file in the root directory with the following variables:
    ```
-   NEXT_PUBLIC_THIRDWEB_CLIENT_ID=your-thirdweb-client-id
-   NEXT_PUBLIC_ETHERSCAN_API_KEY=your-etherscan-api-key
+   ETHERSCAN_API_KEY=your-etherscan-api-key
    BONSAI_API_KEY=your-bonsai-api-key
    ```
 
 4. Start the development server:
    ```bash
-   bun dev
+   bun run dev
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+5. Open [http://localhost:8787](http://localhost:8787) in your browser.
 
 ## Usage
 
@@ -66,25 +64,10 @@ A web application that enables Solidity developers to optimize their smart contr
 ```
 steel-web-app/
 ├── src/
-│   ├── app/
-│   │   ├── api/
-│   │   │   └── generate-proof/
-│   │   │       └── route.ts
-│   │   ├── contract/
-│   │   │   └── [address]/
-│   │   │       └── page.tsx
-│   │   ├── proof/
-│   │   │   └── [address]/
-│   │   │       └── [function]/
-│   │   │           └── page.tsx
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   └── components/
-│       ├── AppLayout.tsx
-│       └── ThirdwebProvider.tsx
-├── public/
-├── .env.local
+│   └── worker.ts        # Main Cloudflare Worker entry point
+├── public/             # Static assets
+├── .env.local         # Environment variables
+├── wrangler.toml      # Cloudflare Workers configuration
 ├── package.json
 └── README.md
 ```

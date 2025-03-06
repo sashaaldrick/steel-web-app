@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Steel Optimization Web App
+
+A web application that enables Solidity developers to optimize their smart contracts using Steel and zero-knowledge proofs.
+
+## Features
+
+- Fetch Solidity contracts from Etherscan using a provided address
+- Highlight optimizable functions and let users select one to optimize
+- Generate a zero-knowledge proof using Bonsai via a Rust backend
+- Publish the proof on-chain with a single click
+- Pre-loaded examples of the top 3 DeFi smart contracts for quick testing
+
+## Tech Stack
+
+- **Frontend**: Next.js, TailwindCSS, Bun
+- **Code Display**: CodeMirror for Solidity display and highlighting
+- **Blockchain Integration**: ThirdWeb SDK for wallet connection and transaction handling
+- **External APIs**: Etherscan API for fetching contract source code
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- [Bun](https://bun.sh/) (v1.0.0 or higher)
+- [Node.js](https://nodejs.org/) (v18.0.0 or higher)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/steel-web-app.git
+   cd steel-web-app
+   ```
+
+2. Install dependencies:
+   ```bash
+   bun install
+   ```
+
+3. Create a `.env.local` file in the root directory with the following variables:
+   ```
+   NEXT_PUBLIC_THIRDWEB_CLIENT_ID=your-thirdweb-client-id
+   NEXT_PUBLIC_ETHERSCAN_API_KEY=your-etherscan-api-key
+   BONSAI_API_KEY=your-bonsai-api-key
+   ```
+
+4. Start the development server:
+   ```bash
+   bun dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Usage
+
+1. Enter an Etherscan contract address or select one of the pre-loaded examples.
+2. The app will display the contract code and highlight optimizable functions.
+3. Select a function to optimize and provide its parameters.
+4. Click "Generate Proof" to create a zero-knowledge proof.
+5. Connect your wallet and click "Publish Proof" to submit it on-chain.
+
+## Development
+
+### Project Structure
+
+```
+steel-web-app/
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   └── generate-proof/
+│   │   │       └── route.ts
+│   │   ├── contract/
+│   │   │   └── [address]/
+│   │   │       └── page.tsx
+│   │   ├── proof/
+│   │   │   └── [address]/
+│   │   │       └── [function]/
+│   │   │           └── page.tsx
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   └── components/
+│       ├── AppLayout.tsx
+│       └── ThirdwebProvider.tsx
+├── public/
+├── .env.local
+├── package.json
+└── README.md
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## License
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Acknowledgements
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Steel](https://github.com/steel-dev/steel) - Zero-knowledge proof library for Solidity
+- [RISC Zero](https://www.risczero.com/) - Zero-knowledge virtual machine
+- [Bonsai](https://www.risczero.com/bonsai) - Zero-knowledge proof service
+- [ThirdWeb](https://thirdweb.com/) - Web3 development framework
+- [Etherscan](https://etherscan.io/) - Ethereum blockchain explorer

@@ -10,6 +10,9 @@ const HTML = `<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contract Uploader</title>
+    <!-- Add Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet" />
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -42,17 +45,15 @@ const HTML = `<!DOCTYPE html>
             padding: 1rem;
             border-radius: 4px;
             white-space: pre-wrap;
-            font-family: monospace;
+            font-family: inherit;
             max-height: 500px;
             overflow-y: auto;
         }
         .success {
             background: #e6f4ea;
-            color: #137333;
         }
         .error {
             background: #fce8e6;
-            color: #c5221f;
         }
         .input-section {
             margin-bottom: 1.5rem;
@@ -88,6 +89,83 @@ const HTML = `<!DOCTYPE html>
             border-radius: 4px;
             resize: vertical;
         }
+        
+        /* Contract display styles */
+        .contract-container {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .contract-header {
+            background-color: #f5f5f5;
+            padding: 10px 15px;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+            color: #333;
+        }
+        .contract-code {
+            padding: 15px;
+            background-color: #f8f8f8;
+            overflow-x: auto;
+        }
+        .contract-code pre {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+        }
+        .contract-code code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333;
+        }
+        
+        /* Markdown styles */
+        #status h1, #status h2, #status h3 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: #333;
+        }
+        #status h1 {
+            font-size: 1.8em;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.3em;
+        }
+        #status h2 {
+            font-size: 1.5em;
+        }
+        #status h3 {
+            font-size: 1.3em;
+        }
+        #status p {
+            margin: 0.8em 0;
+            line-height: 1.6;
+        }
+        #status ul, #status ol {
+            padding-left: 2em;
+            margin: 0.8em 0;
+        }
+        #status pre {
+            background-color: #f6f8fa;
+            border-radius: 3px;
+            padding: 16px;
+            overflow: auto;
+            margin: 1em 0;
+        }
+        #status code {
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            background-color: rgba(27, 31, 35, 0.05);
+            border-radius: 3px;
+            padding: 0.2em 0.4em;
+            font-size: 85%;
+        }
+        #status pre code {
+            background-color: transparent;
+            padding: 0;
+            font-size: 100%;
+        }
     </style>
 </head>
 <body>
@@ -118,6 +196,13 @@ const HTML = `<!DOCTYPE html>
     </div>
 
     <script>
+        // Initialize Prism.js after dynamic content is loaded
+        function highlightCode() {
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        }
+        
         // Tab switching functionality
         document.getElementById('fileTab').addEventListener('click', () => switchTab('file'));
         document.getElementById('textTab').addEventListener('click', () => switchTab('text'));
@@ -179,8 +264,12 @@ const HTML = `<!DOCTYPE html>
 
                 if (response.ok) {
                     const data = await response.json();
-                    status.textContent = data.analysis;
+                    // Use innerHTML instead of textContent to render the HTML
+                    status.innerHTML = data.analysis;
                     status.className = 'success';
+                    
+                    // Apply syntax highlighting
+                    highlightCode();
                 } else {
                     throw new Error('Analysis failed');
                 }
@@ -190,6 +279,13 @@ const HTML = `<!DOCTYPE html>
             }
         });
     </script>
+    
+    <!-- Add Prism.js for syntax highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-solidity.min.js"></script>
 </body>
 </html>`;
 
@@ -203,6 +299,28 @@ async function analyzeContractWithClaude(contractData: string, apiKey: string): 
     const prompt = `You are an expert in using RISC Zero for Steel execution proofs. 
     Please highlight the functions in the following contract that could be converted to using a ZK proof verification and give the suggested function.
     An example of a Steel ERC20 counter proof is as follows:
+
+    from this basic erc20 counter solidity example:
+
+    import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+    contract OnChainERC20Counter {
+    address public tokenContract;
+    uint256 public counter;
+    
+    function checkBalance(address accountAddress) public view returns (uint256) {
+        return IERC20(tokenContract).balanceOf(accountAddress);
+    }
+    
+    // this function will only update the counter if the account has a valid balance > 1
+    function increment(address accountAddress) public {
+        require(checkBalance(accountAddress) > 1, "balance must be greater than 1");
+        counter += 1;
+        }
+    }   
+
+    to this fully Steelified contract:
+
 
     pragma solidity ^0.8.20;
 
@@ -263,7 +381,7 @@ async function analyzeContractWithClaude(contractData: string, apiKey: string): 
 
     ${contractData}
 
-    Please provide your analysis in a structured format.`;
+    Please provide your response in a structured format. Format your analysis using HTML for better display (headings, lists, etc.). Place the contract code in a block with the tags <contract> and </contract>, so that it can be displayed properly.`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -287,7 +405,105 @@ async function analyzeContractWithClaude(contractData: string, apiKey: string): 
     }
 
     const result = await response.json() as ClaudeResponse;
-    return result.content[0].text;
+    const responseText = result.content[0].text;
+
+    // Parse the contract code from the response
+    return parseContractFromResponse(responseText);
+}
+
+/**
+ * Parses the contract code from the Claude response and formats it for display
+ * @param responseText The raw text response from Claude
+ * @returns Formatted HTML with the contract code in a nice text box
+ */
+function parseContractFromResponse(responseText: string): string {
+    // Check if the response contains contract tags
+    const contractRegex = /<contract>([\s\S]*?)<\/contract>/;
+    const match = responseText.match(contractRegex);
+
+    if (match && match[1]) {
+        // Extract the contract code
+        let contractCode = match[1].trim();
+
+        // Check if the contract code is wrapped in a code block
+        const codeBlockRegex = /```(?:solidity)?\s*([\s\S]*?)```/;
+        const codeBlockMatch = contractCode.match(codeBlockRegex);
+
+        if (codeBlockMatch && codeBlockMatch[1]) {
+            // If it's in a code block, extract just the code
+            contractCode = codeBlockMatch[1].trim();
+        }
+
+        // Split the response into parts: before contract, contract, and after contract
+        const parts = responseText.split(/<contract>[\s\S]*?<\/contract>/);
+        const beforeContract = parts[0] || '';
+        const afterContract = parts[1] || '';
+
+        // Since we're now getting HTML directly from Claude, we don't need to convert from markdown
+        // Just sanitize the HTML to prevent XSS attacks
+        const sanitizedBeforeHtml = sanitizeHtml(beforeContract);
+        const sanitizedAfterHtml = sanitizeHtml(afterContract);
+
+        // Create the final HTML with the contract in a nice text box
+        return `
+            ${sanitizedBeforeHtml}
+            <div class="contract-container">
+                <div class="contract-header">
+                    Smart Contract
+                </div>
+                <div class="contract-code">
+                    <pre><code class="language-solidity">${escapeHtml(contractCode)}</code></pre>
+                </div>
+            </div>
+            ${sanitizedAfterHtml}
+        `;
+    }
+
+    // If no contract tags found, return the sanitized HTML response
+    return sanitizeHtml(responseText);
+}
+
+/**
+ * Basic HTML sanitizer to prevent XSS attacks
+ * For a production app, consider using a library like DOMPurify
+ * @param html The HTML to sanitize
+ * @returns Sanitized HTML
+ */
+function sanitizeHtml(html: string): string {
+    // This is a very basic sanitizer that allows common HTML tags
+    // For a real application, use a proper sanitizer library
+
+    // In a Cloudflare Worker environment, we don't have access to the DOM
+    // So we'll use a simple regex-based approach to remove potentially dangerous elements
+
+    // Remove script tags and their contents
+    let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+
+    // Remove event handlers (onclick, onload, etc.)
+    sanitized = sanitized.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '');
+
+    // Remove javascript: URLs
+    sanitized = sanitized.replace(/\s+href\s*=\s*("javascript:[^"]*"|'javascript:[^']*')/gi, ' href="#"');
+
+    // Remove other potentially dangerous attributes
+    sanitized = sanitized.replace(/\s+eval\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '');
+    sanitized = sanitized.replace(/\s+expression\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '');
+
+    return sanitized;
+}
+
+/**
+ * Escapes HTML special characters to prevent XSS
+ * @param text The text to escape
+ * @returns Escaped HTML text
+ */
+function escapeHtml(text: string): string {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 export default {
